@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS2 & CS:GO Stats Widget by SyntxSky</title>
+    <!-- Tailwind CSS for layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Roboto:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* --- THEME VARIABLES --- */
+        :root {
+            --bg-color: #1b1f23;
+            --text-main: #ffffff;
+            --text-sub: #8b9bb4;
+            --accent: #3872FC;
+            /* CS2 Blue */
+            --rating-color: #f0f0f0;
+            --card-bg: #242930;
+            --border-color: #363d4a;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --win-color: #28a745;
+            --loss-color: #dc3545;
+            --csgo-gold: #de9b35;
+            /* Gold for CSGO */
+            --glow: none;
+        }
+
+        /* Light Theme */
+        .theme-light {
+            --bg-color: #f0f2f5;
+            --text-main: #1a1a1a;
+            --text-sub: #555555;
+            --accent: #3872FC;
+            --rating-color: #1a1a1a;
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* CS2 Neon Theme */
+        .theme-neon {
+            --bg-color: #0b0d12;
+            --text-main: #e0e0ff;
+            --text-sub: #607090;
+            --accent: #00c6ff;
+            --rating-color: #fff;
+            --card-bg: #141820;
+            --border-color: #00c6ff;
+            --shadow: 0 0 15px rgba(0, 198, 255, 0.15);
+            --glow: 0 0 8px rgba(0, 198, 255, 0.4);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: transparent;
+            /* For OBS transparency */
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        /* --- WIDGET CONTAINER --- */
+        #widget-container {
+            width: 100%;
+            max-width: 420px;
+            /* Немного шире для новых статов */
+            background-color: var(--bg-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        #widget-container.settings-open {
+            min-height: 580px !important;
+        }
+
+        .theme-neon #widget-container {
+            border: 1px solid var(--accent);
+            box-shadow: 0 0 20px rgba(56, 114, 252, 0.15);
+        }
+
+        /* --- HEADER --- */
+        .header-bg {
+            background: linear-gradient(135deg, rgba(56, 114, 252, 0.15) 0%, rgba(0, 0, 0, 0) 100%);
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .avatar-frame {
+            position: relative;
+            width: 70px;
+            height: 70px;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent);
+            box-shadow: var(--glow);
+        }
+
+        .season-badge {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            width: 28px;
+            height: 28px;
+            background-color: #1b1f23;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
+            color: #fff;
+            border: 2px solid var(--bg-color);
+            overflow: hidden;
+        }
+
+        .season-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 4px;
+        }
+
+        .player-info {
+            flex-grow: 1;
+        }
+
+        .player-name {
+            font-family: 'Play', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-shadow: var(--glow);
+            line-height: 1.2;
+            margin-bottom: 4px;
+        }
+
+        .rating-container {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .player-rating {
+            font-family: 'Play', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--rating-color);
+            letter-spacing: 0.5px;
+        }
+
+        .rating-label {
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- STATS GRID --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1px;
+            background-color: var(--border-color);
+        }
+
+        .stat-item {
+            background-color: var(--card-bg);
+            padding: 0.75rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 75px;
+            position: relative;
+        }
+
+        /* Full width item for the last row if odd number of items */
+        .stat-item.full-width {
+            grid-column: span 2;
+            flex-direction: row;
+            gap: 1rem;
+            height: 60px;
+        }
+
+        .stat-value {
+            font-family: 'Play', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-sub);
+            margin-top: 4px;
+        }
+
+        /* Rank Images */
+        .rank-icon {
+            height: 24px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .val-gold {
+            color: #eebb4d;
+        }
+
+        .val-blue {
+            color: #3872FC;
+        }
+
+        .val-green {
+            color: #28a745;
+        }
+
+        .val-orange {
+            color: #ff5500;
+        }
+
+        .val-csgo {
+            color: var(--csgo-gold);
+        }
+
+        /* --- SETTINGS PANEL (FLIP) --- */
+        .flip-container {
+            perspective: 1000px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .flipper {
+            transition: 0.6s;
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .front,
+        .back {
+            backface-visibility: hidden;
+            width: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .back {
+            transform: rotateY(180deg);
+            position: absolute;
+            height: 100%;
+            background-color: var(--bg-color);
+            z-index: 2;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .flip-active .flipper {
+            transform: rotateY(180deg);
+        }
+
+        /* UI Controls */
+        .settings-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--text-sub);
+            cursor: pointer;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #widget-container:hover .settings-btn {
+            opacity: 1;
+        }
+
+        .form-control {
+            width: 100%;
+            height: 36px;
+            padding: 0 10px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-label {
+            display: block;
+            font-size: 10px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .helper-text {
+            font-size: 10px;
+            color: var(--text-sub);
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background-color: var(--accent);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-secondary {
+            width: 100%;
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid var(--card-bg);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="theme-dark flex items-center justify-center min-h-screen">
+
+    <div class="flip-container">
+        <div class="flipper" id="main-flipper">
+
+            <!-- FRONT: Stats Widget -->
+            <div class="front" id="widget-view">
+                <div id="widget-container">
+                    <i class="fas fa-cog settings-btn" onclick="toggleSettings()" title="Settings"></i>
+
+                    <!-- Header -->
+                    <div class="header-bg">
+                        <div class="avatar-frame">
+                            <img id="p-avatar" src="https://static.csstats.gg/images/avatar-default.png"
+                                class="avatar-img" alt="Avatar">
+                            <div class="season-badge" title="Active Season">
+                                <img src="https://static.csstats.gg/images/premier.png" alt="CS2">
+                            </div>
+                        </div>
+                        <div class="player-info">
+                            <div class="player-name" id="p-nickname">Loading...</div>
+                            <div class="rating-container" id="rating-box">
+                                <span class="rating-label">CS Rating:</span>
+                                <span class="player-rating" id="p-rating">---</span>
+                            </div>
+                        </div>
+                        <div id="loading-indicator" class="ml-auto hidden">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+
+                    <!-- Main Stats -->
+                    <div class="stats-grid">
+                        <!-- CS2 Wins -->
+                        <div class="stat-item">
+                            <div class="stat-value val-green" id="s-wins">---</div>
+                            <div class="stat-label">Premier Wins</div>
+                        </div>
+                        <!-- CS2 Best -->
+                        <div class="stat-item">
+                            <div class="stat-value val-gold" id="s-best">---</div>
+                            <div class="stat-label">Best Rating</div>
+                        </div>
+
+                        <!-- Faceit Level -->
+                        <div class="stat-item">
+                            <div class="stat-value val-orange" id="s-faceit">---</div>
+                            <div class="stat-label">Faceit Level</div>
+                        </div>
+                        <!-- CSGO Rank -->
+                        <div class="stat-item">
+                            <div class="stat-value" id="s-csgo-rank-container">
+                                <!-- Image will be injected here -->
+                                <span>---</span>
+                            </div>
+                            <div class="stat-label">CS:GO Rank</div>
+                        </div>
+
+                        <!-- CSGO Wins (Full Width to balance) -->
+                        <div class="stat-item full-width">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[var(--csgo-gold)] font-bold">CS:GO Legacy:</span>
+                                <span class="stat-value" id="s-csgo-wins">---</span>
+                                <span class="text-xs text-[var(--text-sub)]">Wins</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer Info -->
+                    <div
+                        class="bg-[var(--card-bg)] p-2 text-center text-[10px] text-[var(--text-sub)] border-t border-[var(--border-color)]">
+                        Data provided by csstats.gg
+                    </div>
+                </div>
+            </div>
+
+            <!-- BACK: Settings -->
+            <div class="back" id="settings-view">
+                <div class="h-full flex flex-col">
+                    <h2 class="text-lg font-bold mb-4 text-[var(--accent)]">Widget Settings</h2>
+
+                    <!-- Steam ID Input -->
+                    <div class="mb-3">
+                        <label class="form-label">Steam ID (64)</label>
+                        <input type="text" id="cfg-steamid" class="form-control" placeholder="76561198055140787">
+                        <div class="helper-text">Find your SteamID64 on steamid.io</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <!-- Theme -->
+                        <div>
+                            <label class="form-label">Theme</label>
+                            <select id="cfg-theme" class="form-control">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                                <option value="neon">Neon</option>
+                            </select>
+                        </div>
+                        <!-- Refresh -->
+                        <div>
+                            <label class="form-label">Refresh (min)</label>
+                            <input type="number" id="cfg-refresh" class="form-control" value="5" min="1">
+                        </div>
+                    </div>
+
+                    <!-- Proxy Settings -->
+                    <label class="form-label">Proxy Service</label>
+                    <select id="cfg-proxy-select" class="form-control mb-2" onchange="updateProxyInput()">
+                        <option value="/csstats/">Local (/csstats/)</option>
+                        <option value="https://api.codetabs.com/v1/proxy?quest=">CodeTabs (Best)</option>
+                        <option value="https://thingproxy.freeboard.io/fetch/">ThingProxy</option>
+                        <option value="https://api.allorigins.win/raw?url=">AllOrigins</option>
+                        <option value="https://corsproxy.io/?">CORSProxy.io</option>
+                        <option value="custom">Custom URL...</option>
+                    </select>
+
+                    <input type="text" id="cfg-proxy" class="form-control mb-1 hidden"
+                        placeholder="e.g. https://my-proxy.com/?url=">
+                    <div class="helper-text mb-4">Try "CodeTabs" or "ThingProxy" if others fail.</div>
+
+                    <div class="mt-1 mb-4 flex items-center gap-2">
+                        <input type="checkbox" id="cfg-demo" style="width:auto; margin:0; cursor:pointer;">
+                        <label for="cfg-demo" class="text-sm cursor-pointer select-none">Demo Mode (Mock Data)</label>
+                    </div>
+
+                    <div class="mt-auto flex gap-2">
+                        <button onclick="saveSettings()" class="btn-primary">Save & Load</button>
+                        <button onclick="toggleSettings()" class="btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const DEFAULT_PROXY = 'https://api.codetabs.com/v1/proxy?quest=';
+
+        const DEFAULT_CONFIG = {
+            steamId: '76561198055140787', // Default user from example
+            theme: 'dark',
+            isDemo: true,
+            refreshInterval: 5, // minutes
+            proxy: DEFAULT_PROXY
+        };
+
+        let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+        let refreshTimer = null;
+
+        // --- MOCK DATA ---
+        const MOCK_DATA = {
+            nickname: "^1mijkeeee",
+            avatar: "https://avatars.steamstatic.com/341ac05b5776b193057f1c58aeb7ccd71e11a7ff_full.jpg",
+            premier: {
+                rating: "13,794",
+                best: "14,619",
+                wins: "19"
+            },
+            faceit: {
+                level: "8"
+            },
+            csgo: {
+                wins: "295",
+                rankImg: "https://static.csstats.gg/images/ranks/14.png"
+            }
+        };
+
+        // --- INITIALIZATION ---
+        function init() {
+            loadSettings();
+            applyTheme(config.theme);
+            populateSettingsUI();
+
+            fetchData();
+
+            // Set auto-refresh
+            if (refreshTimer) clearInterval(refreshTimer);
+            refreshTimer = setInterval(fetchData, config.refreshInterval * 60 * 1000);
+        }
+
+        function loadSettings() {
+            const urlParams = new URLSearchParams(window.location.search);
+            // 1. Check URL
+            if (urlParams.has('cfg')) {
+                try {
+                    const decoded = atob(urlParams.get('cfg'));
+                    config = { ...DEFAULT_CONFIG, ...JSON.parse(decoded) };
+                    return;
+                } catch (e) { console.error("URL Config Error", e); }
+            }
+            // 2. LocalStorage
+            const savedConfig = localStorage.getItem('cs2WidgetConfig');
+            if (savedConfig) {
+                try {
+                    config = { ...DEFAULT_CONFIG, ...JSON.parse(savedConfig) };
+                    return;
+                } catch (e) { console.error("Local Config Error", e); }
+            }
+        }
+
+        function populateSettingsUI() {
+            document.getElementById('cfg-steamid').value = config.steamId;
+            document.getElementById('cfg-theme').value = config.theme;
+            document.getElementById('cfg-refresh').value = config.refreshInterval;
+            document.getElementById('cfg-demo').checked = config.isDemo;
+
+            const currentProxy = config.proxy || DEFAULT_PROXY;
+            const select = document.getElementById('cfg-proxy-select');
+            const input = document.getElementById('cfg-proxy');
+
+            // Check if current proxy matches one of the options
+            let match = false;
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === currentProxy) {
+                    select.value = currentProxy;
+                    match = true;
+                    break;
+                }
+            }
+
+            if (!match) {
+                select.value = 'custom';
+                input.value = currentProxy;
+                input.classList.remove('hidden');
+            } else {
+                input.classList.add('hidden');
+            }
+        }
+
+        function updateProxyInput() {
+            const select = document.getElementById('cfg-proxy-select');
+            const input = document.getElementById('cfg-proxy');
+
+            if (select.value === 'custom') {
+                input.classList.remove('hidden');
+                input.focus();
+            } else {
+                input.classList.add('hidden');
+                input.value = select.value;
+            }
+        }
+
+        function saveSettings() {
+            const select = document.getElementById('cfg-proxy-select');
+            const input = document.getElementById('cfg-proxy');
+            const proxyVal = select.value === 'custom' ? input.value : select.value;
+
+            const newConfig = {
+                steamId: document.getElementById('cfg-steamid').value.trim(),
+                theme: document.getElementById('cfg-theme').value,
+                refreshInterval: parseInt(document.getElementById('cfg-refresh').value) || 5,
+                isDemo: document.getElementById('cfg-demo').checked,
+                proxy: proxyVal
+            };
+
+            localStorage.setItem('cs2WidgetConfig', JSON.stringify(newConfig));
+            config = { ...config, ...newConfig };
+
+            // Update URL
+            const encodedCfg = btoa(JSON.stringify(newConfig));
+            try {
+                const url = new URL(window.location);
+                url.search = `?cfg=${encodedCfg}`;
+                window.history.replaceState({}, '', url);
+            } catch (e) { }
+
+            toggleSettings();
+            applyTheme(config.theme);
+            fetchData();
+        }
+
+        function toggleSettings() {
+            const flipper = document.getElementById('main-flipper');
+            const flipContainer = flipper.parentElement;
+            const container = document.getElementById('widget-container');
+            const isOpening = !flipContainer.classList.contains('flip-active');
+
+            flipContainer.classList.toggle('flip-active');
+
+            if (isOpening) {
+                container.classList.add('settings-open');
+            } else {
+                setTimeout(() => {
+                    container.classList.remove('settings-open');
+                }, 600);
+            }
+        }
+
+        function applyTheme(themeName) {
+            document.body.className = `theme-${themeName} flex items-center justify-center min-h-screen`;
+        }
+
+        // --- DATA FETCHING & PARSING ---
+        async function fetchData() {
+            setLoading(true);
+
+            if (config.isDemo) {
+                await new Promise(r => setTimeout(r, 800)); // Simulate delay
+                renderData(MOCK_DATA);
+                setLoading(false);
+                return;
+            }
+
+            if (!config.steamId) {
+                renderError("Steam ID Missing");
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const proxy = config.proxy || DEFAULT_PROXY;
+                let fetchUrl;
+
+                // Intelligent Proxy Handling:
+                if (proxy.trim().match(/[?=]$/)) {
+                    const targetUrl = `https://csstats.gg/player/${config.steamId}`;
+                    fetchUrl = proxy + encodeURIComponent(targetUrl);
+                } else {
+                    // Local Nginx Proxy Mode
+                    const prefix = proxy.endsWith('/') || proxy === '' ? proxy : proxy + '/';
+                    fetchUrl = `${prefix}player/${config.steamId}`;
+                }
+
+                const response = await fetch(fetchUrl);
+
+                if (response.status === 403) throw new Error("403: Proxy Blocked");
+                if (response.status === 500) throw new Error("500: Proxy Error");
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+
+                const htmlText = await response.text();
+                const parsedData = parseCSStatsHTML(htmlText);
+
+                renderData(parsedData);
+
+            } catch (err) {
+                console.error(err);
+                let msg = err.message || "Fetch Error";
+                if (msg.includes('403')) msg = "Proxy Blocked (Try another)";
+                renderError(msg);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function parseCSStatsHTML(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // 1. Basic Info
+            const nickname = doc.querySelector('#player-name')?.textContent.trim() || "Unknown";
+            const avatar = doc.querySelector('#player-avatar img')?.src || "";
+
+            // 2. Find Premier Stats
+            let premierData = { rating: "N/A", best: "N/A", wins: "0" };
+
+            const ranks = doc.querySelectorAll('.ranks');
+
+            // Helper to clean rating text
+            const cleanRating = (text) => text.replace(/\s+/g, '').replace(/,/g, ',');
+
+            ranks.forEach(rankRow => {
+                const iconImg = rankRow.querySelector('.icon img');
+                if (iconImg && (iconImg.src.includes('premier.png') || iconImg.alt.includes('Premier'))) {
+                    // Check if current season
+                    const ratingEl = rankRow.querySelector('.rank .cs2rating');
+                    if (ratingEl) {
+                        premierData.rating = cleanRating(ratingEl.textContent);
+                    }
+
+                    const bestEl = rankRow.querySelector('.best .cs2rating');
+                    if (bestEl) {
+                        premierData.best = cleanRating(bestEl.textContent);
+                    }
+
+                    const winsEl = rankRow.querySelector('.bottom .wins b');
+                    if (winsEl) {
+                        premierData.wins = winsEl.textContent.trim();
+                    }
+                }
+            });
+
+            // 3. Find Faceit Level
+            let faceitLvl = "N/A";
+            ranks.forEach(rankRow => {
+                const iconImg = rankRow.querySelector('.icon img');
+                if (iconImg && (iconImg.src.includes('faceit.png') || iconImg.alt.includes('FACEIT'))) {
+                    const lvlImg = rankRow.querySelector('.rank img.rank');
+                    if (lvlImg) {
+                        const match = lvlImg.src.match(/level(\d+)\.png/);
+                        if (match) faceitLvl = match[1];
+                    }
+                }
+            });
+
+            // 4. Find CS:GO Stats (Using Legacy Block)
+            let csgoData = { wins: "N/A", rankImg: "" };
+
+            // The structure is usually a Header followed by .ranks
+            // We search for the CSGO Logo in headers
+            const headers = doc.querySelectorAll('.header');
+            headers.forEach(header => {
+                const img = header.querySelector('img');
+                if (img && img.src.includes('logo-csgo.png')) {
+                    // The NEXT sibling element should be the div.ranks for CSGO
+                    let nextElem = header.nextElementSibling;
+                    while (nextElem && !nextElem.classList.contains('ranks')) {
+                        nextElem = nextElem.nextElementSibling;
+                    }
+
+                    if (nextElem && nextElem.classList.contains('ranks')) {
+                        const rankImg = nextElem.querySelector('.rank img');
+                        if (rankImg) csgoData.rankImg = rankImg.src;
+
+                        const winsEl = nextElem.querySelector('.bottom .wins b');
+                        if (winsEl) csgoData.wins = winsEl.textContent.trim();
+                    }
+                }
+            });
+
+
+            return {
+                nickname,
+                avatar,
+                premier: premierData,
+                faceit: { level: faceitLvl },
+                csgo: csgoData
+            };
+        }
+
+        // --- RENDERING ---
+        function renderData(data) {
+            // Player
+            document.getElementById('p-nickname').innerText = data.nickname;
+            if (data.avatar) document.getElementById('p-avatar').src = data.avatar;
+
+            // CS2 Premier
+            document.getElementById('p-rating').innerText = data.premier.rating;
+            document.getElementById('s-wins').innerText = data.premier.wins;
+            document.getElementById('s-best').innerText = data.premier.best;
+
+            // Faceit
+            const fLevel = document.getElementById('s-faceit');
+            fLevel.innerText = data.faceit.level;
+
+            // Colorize Faceit Level
+            const lvl = parseInt(data.faceit.level);
+            if (!isNaN(lvl)) {
+                if (lvl === 10) fLevel.style.color = '#FE1F00';
+                else if (lvl >= 8) fLevel.style.color = '#FF5500';
+                else if (lvl >= 4) fLevel.style.color = '#FFD700';
+                else fLevel.style.color = '#aaaaaa';
+            } else {
+                fLevel.style.color = 'var(--text-sub)';
+            }
+
+            // CS:GO
+            const csgoContainer = document.getElementById('s-csgo-rank-container');
+            if (data.csgo.rankImg) {
+                csgoContainer.innerHTML = `<img src="${data.csgo.rankImg}" class="rank-icon" alt="Rank">`;
+            } else {
+                csgoContainer.innerHTML = `<span class="text-[var(--text-sub)] text-sm">Unranked</span>`;
+            }
+
+            document.getElementById('s-csgo-wins').innerText = data.csgo.wins;
+        }
+
+        function renderError(msg) {
+            document.getElementById('p-nickname').innerText = "Error";
+            document.getElementById('p-rating').innerText = "---";
+            const loading = document.getElementById('loading-indicator');
+            if (loading) loading.classList.add('hidden');
+            // Show alert/toast if needed, but for now stats show error
+            document.getElementById('s-wins').innerText = "Err";
+            document.getElementById('s-best').innerText = "Err";
+        }
+
+        function setLoading(isLoading) {
+            const indicator = document.getElementById('loading-indicator');
+            if (isLoading) indicator.classList.remove('hidden');
+            else indicator.classList.add('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+
+</html>

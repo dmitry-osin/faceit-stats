@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="50%" stop-color="#3872FC"/>
+      <stop offset="100%" stop-color="#7b61ff"/>
+    </linearGradient>
+    <filter id="sky-glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect x="4" y="4" width="56" height="56" rx="14" ry="14" fill="#050814"/>
+  <rect x="4" y="4" width="56" height="56" rx="14" ry="14" fill="url(#sky-gradient)" opacity="0.12"/>
+
+  <!-- Border -->
+  <rect x="5.5" y="5.5" width="53" height="53" rx="13" ry="13" fill="none" stroke="url(#sky-gradient)" stroke-width="2"/>
+
+  <!-- SKY Text -->
+  <g filter="url(#sky-glow)" fill="none" stroke="url(#sky-gradient)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- S -->
+    <path d="M18 40
+             Q 14 38 14 34
+             Q 14 30 18 28
+             Q 22 26 26 24
+             Q 30 22 30 18
+             Q 30 14 26 12" />
+
+    <!-- K -->
+    <path d="M32 16 L32 40" />
+    <path d="M32 28 L42 16" />
+    <path d="M32 28 L42 40" />
+
+    <!-- Y -->
+    <path d="M46 16 L52 24" />
+    <path d="M46 16 L40 24" />
+    <path d="M46 24 L46 40" />
+  </g>
+
+  <!-- Center glow dot -->
+  <circle cx="32" cy="32" r="2.4" fill="#ffffff" opacity="0.9"/>
+  <circle cx="32" cy="32" r="6" fill="url(#sky-gradient)" opacity="0.35"/>
+</svg>
+

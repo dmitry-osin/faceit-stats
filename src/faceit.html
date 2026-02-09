@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FACEIT Stats Widget by SyntxSky</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon-sky.svg">
+    <!-- Tailwind CSS for layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Roboto:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* --- THEME VARIABLES --- */
+        :root {
+            --bg-color: #1f1f1f;
+            --text-main: #ffffff;
+            --text-sub: #a0a0a0;
+            --accent: #ff5500;
+            /* FACEIT Orange */
+            --card-bg: #2d2d2d;
+            --border-color: #3d3d3d;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --win-color: #28a745;
+            --loss-color: #dc3545;
+            --glow: none;
+        }
+
+        /* Light Theme */
+        .theme-light {
+            --bg-color: #f0f2f5;
+            --text-main: #1a1a1a;
+            --text-sub: #555555;
+            --accent: #ff5500;
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Neon Theme */
+        .theme-neon {
+            --bg-color: #09090b;
+            --text-main: #e0e0ff;
+            --text-sub: #8080a0;
+            --accent: #00ffff;
+            --card-bg: #121216;
+            --border-color: #00ffff;
+            --shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+            --glow: 0 0 5px var(--accent);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: transparent;
+            /* For OBS transparency */
+            color: var(--text-main);
+            overflow: hidden;
+            /* Prevent scrollbars in OBS */
+        }
+
+        /* --- WIDGET CONTAINER --- */
+        #widget-container {
+            width: 100%;
+            max-width: 500px;
+            /* Increased from 400px to 500px (+25%) */
+            background-color: var(--bg-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: height 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, min-height 0.3s ease;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        /* Force min-height when settings are open to prevent clipping/white background */
+        #widget-container.settings-open {
+            min-height: 620px !important;
+            /* Increased slightly for extra field */
+        }
+
+        .theme-neon #widget-container {
+            border: 1px solid var(--accent);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
+        }
+
+        /* --- HEADER --- */
+        .header-bg {
+            background: linear-gradient(135deg, rgba(255, 85, 0, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .size-small .header-bg {
+            border-bottom: none;
+        }
+
+        .theme-neon .header-bg {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+        }
+
+        .avatar-frame {
+            position: relative;
+            width: 64px;
+            height: 64px;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent);
+            box-shadow: var(--glow);
+        }
+
+        .level-badge {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            width: 24px;
+            height: 24px;
+            background-color: #2d2d2d;
+            /* Always dark bg */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: #fff;
+            /* Always white text */
+            border: 2px solid var(--bg-color);
+        }
+
+        .player-name {
+            font-family: 'Play', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-shadow: var(--glow);
+        }
+
+        .player-elo {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+
+        /* --- STATS GRID --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1px;
+            background-color: var(--border-color);
+            /* Gap color */
+        }
+
+        .stat-item {
+            background-color: var(--card-bg);
+            padding: 0.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Play', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-sub);
+            margin-top: 2px;
+        }
+
+        /* --- MATCH HISTORY --- */
+        .match-list {
+            padding: 0.5rem;
+        }
+
+        .match-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--card-bg);
+            margin-bottom: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            border-left: 4px solid transparent;
+            transition: transform 0.2s;
+        }
+
+        .match-item:hover {
+            transform: translateX(2px);
+        }
+
+        .match-win {
+            border-left-color: var(--win-color);
+        }
+
+        .match-loss {
+            border-left-color: var(--loss-color);
+        }
+
+        .match-result-badge {
+            font-weight: bold;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #fff;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .badge-w {
+            background-color: var(--win-color);
+            box-shadow: 0 0 5px rgba(40, 167, 69, 0.4);
+        }
+
+        .badge-l {
+            background-color: var(--loss-color);
+            box-shadow: 0 0 5px rgba(220, 53, 69, 0.4);
+        }
+
+        /* --- SETTINGS PANEL (FLIP) --- */
+        .flip-container {
+            perspective: 1000px;
+        }
+
+        .flipper {
+            transition: 0.6s;
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .front,
+        .back {
+            backface-visibility: hidden;
+            width: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .back {
+            transform: rotateY(180deg);
+            position: absolute;
+            height: 100%;
+            background-color: var(--bg-color);
+            z-index: 2;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .flip-active .flipper {
+            transform: rotateY(180deg);
+        }
+
+        /* UI Controls */
+        .settings-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--text-sub);
+            cursor: pointer;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #widget-container:hover .settings-btn {
+            opacity: 1;
+        }
+
+        /* Form Elements */
+        .form-control {
+            width: 100%;
+            height: 36px;
+            /* Fixed equal height */
+            padding: 0 10px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-label {
+            display: block;
+            font-size: 10px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        /* Checkbox customization */
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            cursor: pointer;
+        }
+
+        .checkbox-item input {
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background-color: var(--accent);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            width: 100%;
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            /* Ensure readable text */
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            opacity: 0.9;
+            background-color: var(--border-color);
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid var(--card-bg);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="theme-dark flex items-center justify-center min-h-screen">
+
+    <div class="flip-container">
+        <div class="flipper" id="main-flipper">
+
+            <!-- FRONT: Stats Widget -->
+            <div class="front" id="widget-view">
+                <div id="widget-container">
+                    <i class="fas fa-cog settings-btn" onclick="toggleSettings()" title="Settings"></i>
+
+                    <!-- Header -->
+                    <div class="header-bg">
+                        <div class="avatar-frame">
+                            <img id="p-avatar" src="https://assets.faceit-cdn.net/avatars/defaults/user.png"
+                                class="avatar-img" alt="Avatar">
+                            <div class="level-badge" id="p-level">1</div>
+                        </div>
+                        <div>
+                            <div class="player-name" id="p-nickname">Loading...</div>
+                            <div class="player-elo" id="block-elo"><span
+                                    class="text-[var(--accent)] font-bold">ELO:</span> <span id="p-elo">---</span></div>
+                        </div>
+                        <div id="loading-indicator" class="ml-auto hidden">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+
+                    <!-- Main Stats -->
+                    <div class="stats-grid">
+                        <div class="stat-item" id="block-matches">
+                            <div class="stat-value" id="s-matches">---</div>
+                            <div class="stat-label">Matches</div>
+                        </div>
+                        <div class="stat-item" id="block-wins">
+                            <div class="stat-value" id="s-wins">---</div>
+                            <div class="stat-label">Wins</div>
+                        </div>
+                        <div class="stat-item" id="block-winrate">
+                            <div class="stat-value" id="s-winrate">---%</div>
+                            <div class="stat-label">Win Rate</div>
+                        </div>
+                        <div class="stat-item" id="block-streak">
+                            <div class="stat-value" id="s-streak">---</div>
+                            <div class="stat-label">Streak</div>
+                        </div>
+                        <!-- NEW STATS -->
+                        <div class="stat-item" id="block-avgkd">
+                            <div class="stat-value text-[var(--accent)]" id="s-avgkd">---</div>
+                            <div class="stat-label">Avg K/D</div>
+                        </div>
+                        <div class="stat-item" id="block-avghs">
+                            <div class="stat-value" id="s-avghs">---%</div>
+                            <div class="stat-label">Avg HS%</div>
+                        </div>
+                    </div>
+
+                    <!-- Match History -->
+                    <div class="match-list" id="match-history-container">
+                        <!-- Matches will be injected here -->
+                        <div class="text-center text-xs text-[var(--text-sub)] py-2">Waiting for data...</div>
+                    </div>
+
+                    <!-- Footer Info -->
+                    <div
+                        class="bg-[var(--card-bg)] p-2 text-center text-[10px] text-[var(--text-sub)] border-t border-[var(--border-color)]">
+                        FACEIT Stats Widget by SyntxSky
+                    </div>
+                </div>
+            </div>
+
+            <!-- BACK: Settings -->
+            <div class="back" id="settings-view">
+                <div class="h-full flex flex-col">
+                    <h2 class="text-lg font-bold mb-2 text-[var(--accent)]">Widget Settings</h2>
+
+                    <!-- Nickname (Top) -->
+                    <div class="mb-2">
+                        <label class="form-label">Player Nickname</label>
+                        <input type="text" id="cfg-nickname" class="form-control" placeholder="e.g. s1mple">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <!-- Theme -->
+                        <div>
+                            <label class="form-label">Theme</label>
+                            <select id="cfg-theme" class="form-control">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                                <option value="neon">Neon</option>
+                            </select>
+                        </div>
+                        <!-- Widget Size -->
+                        <div>
+                            <label class="form-label">Widget Size</label>
+                            <select id="cfg-size" class="form-control">
+                                <option value="small">Small</option>
+                                <option value="medium">Medium</option>
+                                <option value="large">Full</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <label class="form-label">Visible Stats</label>
+                    <div class="checkbox-group bg-[var(--card-bg)] p-2 rounded border border-[var(--border-color)]">
+                        <label class="checkbox-item"><input type="checkbox" id="chk-elo" checked> ELO / Level</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chk-matches" checked> Matches</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chk-wins" checked> Wins</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chk-winrate" checked> Win Rate</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chk-streak" checked> Streak</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chk-avgkd" checked> Avg K/D</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chk-avghs" checked> Avg HS%</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chk-history" checked> History</label>
+                    </div>
+
+                    <label class="form-label">API Key (Optional)</label>
+                    <input type="password" id="cfg-apikey" class="form-control mb-2"
+                        placeholder="xxxxxxxx-xxxx-xxxx...">
+
+                    <label class="form-label">Proxy URL (Advanced)</label>
+                    <input type="text" id="cfg-proxy" class="form-control mb-3" placeholder="https://corsproxy.io/?">
+
+                    <div class="mt-1 mb-4 flex items-center gap-2">
+                        <input type="checkbox" id="cfg-demo" style="width:auto; margin:0; cursor:pointer;">
+                        <label for="cfg-demo" class="text-sm cursor-pointer select-none">Demo Mode (No API)</label>
+                    </div>
+
+                    <div class="mt-auto flex gap-2">
+                        <button onclick="saveSettings()" class="btn-primary">Save</button>
+                        <button onclick="toggleSettings()" class="btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // We set a default proxy here, but allow user override in settings
+        const DEFAULT_PROXY = 'https://corsproxy.io/?';
+
+        const DEFAULT_CONFIG = {
+            nickname: 'DemoUser',
+            apiKey: '',
+            theme: 'dark',
+            isDemo: true,
+            widgetSize: 'large',
+            refreshInterval: 180,
+            proxy: DEFAULT_PROXY,
+            visibleStats: {
+                elo: true,
+                matches: true,
+                wins: true,
+                winrate: true,
+                streak: true,
+                avgkd: true,
+                avghs: true,
+                history: true
+            }
+        };
+
+        let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+        let refreshTimer = null;
+
+        // --- MOCK DATA FOR DEMO MODE ---
+        const MOCK_DATA = {
+            player: {
+                nickname: "Demo_Player",
+                player_id: "demo_id",
+                avatar: "https://distribution.faceit-cdn.net/images/f613a3d8-4b72-4d0a-9d21-7d1b3f7f8f8b.jpeg",
+                games: {
+                    cs2: { faceit_elo: 2450, skill_level: 10 }
+                }
+            },
+            stats: {
+                lifetime: {
+                    Matches: "1,240",
+                    "Win Rate %": "54",
+                    Wins: "670",
+                    "Longest Win Streak": "12",
+                    "Current Win Streak": "3",
+                    "Average K/D Ratio": "1.42",
+                    "Average Headshots %": "58"
+                }
+            },
+            history: [
+                { match_id: "1", stats: { Result: "1", Score: "13 / 9", Map: "de_mirage", Kills: "24", Deaths: "12", "K/D Ratio": "2.0", "Headshots %": "62", Created_At: new Date().toISOString() } },
+                { match_id: "2", stats: { Result: "0", Score: "11 / 13", Map: "de_nuke", Kills: "15", Deaths: "18", "K/D Ratio": "0.83", "Headshots %": "45", Created_At: new Date(Date.now() - 86400000).toISOString() } },
+                { match_id: "3", stats: { Result: "1", Score: "13 / 5", Map: "de_anubis", Kills: "19", Deaths: "10", "K/D Ratio": "1.9", "Headshots %": "55", Created_At: new Date(Date.now() - 172800000).toISOString() } },
+                { match_id: "4", stats: { Result: "1", Score: "16 / 14", Map: "de_inferno", Kills: "28", Deaths: "24", "K/D Ratio": "1.16", "Headshots %": "40", Created_At: new Date(Date.now() - 259200000).toISOString() } },
+                { match_id: "5", stats: { Result: "0", Score: "8 / 13", Map: "de_ancient", Kills: "8", Deaths: "15", "K/D Ratio": "0.53", "Headshots %": "33", Created_At: new Date(Date.now() - 345600000).toISOString() } }
+            ]
+        };
+
+        // --- INITIALIZATION ---
+        function init() {
+            loadSettings();
+            applyTheme(config.theme);
+            populateSettingsUI();
+
+            fetchData();
+
+            // Set auto-refresh
+            if (refreshTimer) clearInterval(refreshTimer);
+            refreshTimer = setInterval(fetchData, config.refreshInterval * 1000);
+        }
+
+        function loadSettings() {
+            const urlParams = new URLSearchParams(window.location.search);
+            // 1. Check for encoded 'cfg' param
+            if (urlParams.has('cfg')) {
+                try {
+                    const decoded = atob(urlParams.get('cfg'));
+                    const urlConfig = JSON.parse(decoded);
+                    config = { ...DEFAULT_CONFIG, ...urlConfig };
+                    return; // Loaded successfully from URL
+                } catch (e) {
+                    console.error("Failed to decode cfg param", e);
+                }
+            }
+
+            // 2. Fallback to LocalStorage (if exists)
+            const savedConfig = localStorage.getItem('faceitWidgetConfig');
+            if (savedConfig) {
+                try {
+                    config = { ...DEFAULT_CONFIG, ...JSON.parse(savedConfig) };
+                    return;
+                } catch (e) {
+                    console.error("Failed to parse local config", e);
+                }
+            }
+
+            // 3. Use Default Config
+            config = { ...DEFAULT_CONFIG };
+        }
+
+        function populateSettingsUI() {
+            document.getElementById('cfg-nickname').value = config.nickname;
+            document.getElementById('cfg-apikey').value = config.apiKey;
+            document.getElementById('cfg-theme').value = config.theme;
+            document.getElementById('cfg-size').value = config.widgetSize || 'large';
+            document.getElementById('cfg-demo').checked = config.isDemo;
+            document.getElementById('cfg-proxy').value = config.proxy || DEFAULT_PROXY;
+
+            // Checkboxes
+            document.getElementById('chk-elo').checked = config.visibleStats.elo;
+            document.getElementById('chk-matches').checked = config.visibleStats.matches;
+            document.getElementById('chk-wins').checked = config.visibleStats.wins;
+            document.getElementById('chk-winrate').checked = config.visibleStats.winrate;
+            document.getElementById('chk-streak').checked = config.visibleStats.streak;
+            document.getElementById('chk-avgkd').checked = config.visibleStats.avgkd;
+            document.getElementById('chk-avghs').checked = config.visibleStats.avghs;
+            document.getElementById('chk-history').checked = config.visibleStats.history;
+        }
+
+        function saveSettings() {
+            const stats = {
+                elo: document.getElementById('chk-elo').checked,
+                matches: document.getElementById('chk-matches').checked,
+                wins: document.getElementById('chk-wins').checked,
+                winrate: document.getElementById('chk-winrate').checked,
+                streak: document.getElementById('chk-streak').checked,
+                avgkd: document.getElementById('chk-avgkd').checked,
+                avghs: document.getElementById('chk-avghs').checked,
+                history: document.getElementById('chk-history').checked
+            };
+
+            const newConfig = {
+                nickname: document.getElementById('cfg-nickname').value,
+                apiKey: document.getElementById('cfg-apikey').value,
+                theme: document.getElementById('cfg-theme').value,
+                widgetSize: document.getElementById('cfg-size').value,
+                isDemo: document.getElementById('cfg-demo').checked,
+                proxy: document.getElementById('cfg-proxy').value, // Save custom proxy
+                visibleStats: stats
+            };
+
+            // Save to LocalStorage for persistence
+            localStorage.setItem('faceitWidgetConfig', JSON.stringify(newConfig));
+            config = { ...config, ...newConfig };
+
+            // Generate Base64 Encode Config for URL
+            const configString = JSON.stringify(newConfig);
+            const encodedCfg = btoa(configString);
+
+            // Update URL cleanly with try-catch for sandbox safety
+            try {
+                const url = new URL(window.location);
+                url.search = `?cfg=${encodedCfg}`;
+                window.history.replaceState({}, '', url);
+            } catch (e) {
+                console.warn("Could not update URL (likely due to sandbox environment):", e);
+            }
+
+            toggleSettings();
+            applyTheme(config.theme);
+
+            setTimeout(() => {
+                fetchData();
+            }, 600);
+        }
+
+        function toggleSettings() {
+            const flipper = document.getElementById('main-flipper');
+            const flipContainer = flipper.parentElement;
+            const container = document.getElementById('widget-container');
+            const isOpening = !flipContainer.classList.contains('flip-active');
+
+            flipContainer.classList.toggle('flip-active');
+
+            if (isOpening) {
+                container.classList.add('settings-open');
+                expandForSettings();
+            } else {
+                setTimeout(() => {
+                    container.classList.remove('settings-open');
+                    updateVisibility();
+                }, 600);
+            }
+        }
+
+        function expandForSettings() {
+            const container = document.getElementById('widget-container');
+            const statsGrid = document.querySelector('.stats-grid');
+            const historyCont = document.getElementById('match-history-container');
+
+            container.classList.remove('size-small', 'size-medium');
+            container.classList.add('size-large');
+
+            statsGrid.classList.remove('hidden');
+            historyCont.classList.remove('hidden');
+        }
+
+        function applyTheme(themeName) {
+            document.body.className = `theme-${themeName} flex items-center justify-center min-h-screen`;
+        }
+
+        // --- DATA FETCHING & LOGIC ---
+        async function fetchData() {
+            setLoading(true);
+            updateVisibility();
+
+            if (config.isDemo) {
+                await new Promise(r => setTimeout(r, 600));
+                renderPlayer(MOCK_DATA.player);
+                renderStats(MOCK_DATA.stats);
+                const processedHistory = await processStatsHistory(MOCK_DATA.history);
+                renderHistory(processedHistory);
+                setLoading(false);
+                return;
+            }
+
+            if (!config.apiKey) {
+                renderError("API Key Required");
+                setLoading(false);
+                return;
+            }
+
+            try {
+                // 1. Get Player ID
+                const player = await apiCall(`/players?nickname=${config.nickname}`);
+                if (!player || !player.player_id) throw new Error("Player not found");
+
+                renderPlayer(player);
+                const playerId = player.player_id;
+
+                // 2. Get Stats (CS2)
+                const stats = await apiCall(`/players/${playerId}/stats/cs2`);
+                renderStats(stats);
+
+                // 3. Get History
+                const shouldFetchHistory = config.visibleStats.history && config.widgetSize === 'large';
+
+                if (shouldFetchHistory) {
+                    const historyRaw = await apiCall(`/players/${playerId}/games/cs2/stats?offset=0&limit=5`);
+                    const matches = await processStatsHistory(historyRaw.items);
+                    renderHistory(matches);
+                } else {
+                    document.getElementById('match-history-container').innerHTML = '';
+                }
+
+            } catch (err) {
+                console.error(err);
+                renderError(err.message || "Load Error");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function apiCall(endpoint) {
+            // Use local nginx proxy at /api/ which forwards to FACEIT API
+            // nginx rewrites /api/players?nickname=... to https://open.faceit.com/data/v4/players?nickname=...
+            const url = `/api${endpoint}`;
+
+            const headers = {
+                'Authorization': `Bearer ${config.apiKey}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
+
+            const response = await fetch(url, { headers });
+
+            if (response.status === 401 || response.status === 403) throw new Error("Invalid API Key");
+            if (response.status === 404) throw new Error("Data not found");
+            if (response.status === 429) throw new Error("Rate Limit Exceeded");
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+            return await response.json();
+        }
+
+        async function processStatsHistory(items) {
+            if (!items) return [];
+
+            return items.map(item => {
+                const s = item.stats || {};
+                const iWin = s.Result === "1";
+                const scoreDisplay = s.Score || "N/A";
+                let mapName = s.Map || "cs2_map";
+                const kills = s.Kills || "0";
+                const deaths = s.Deaths || "0";
+                const kd = s["K/D Ratio"] || "0.00";
+                const hs = s["Headshots %"] || "0";
+                const dateStr = item.created_at || s.Created_At || s.created_at || null;
+
+                return {
+                    match_id: item.match_id,
+                    created_at: dateStr,
+                    i_win: iWin,
+                    score: scoreDisplay,
+                    map: mapName,
+                    kills: kills,
+                    deaths: deaths,
+                    kd: kd,
+                    hs: hs
+                };
+            });
+        }
+
+        // --- RENDERING ---
+        function updateVisibility() {
+            const container = document.getElementById('widget-container');
+            const statsGrid = document.querySelector('.stats-grid');
+            const historyCont = document.getElementById('match-history-container');
+            const size = config.widgetSize || 'large';
+
+            container.classList.remove('size-small', 'size-medium', 'size-large');
+            container.classList.add(`size-${size}`);
+
+            if (size === 'small') {
+                statsGrid.classList.add('hidden');
+                historyCont.classList.add('hidden');
+            } else if (size === 'medium') {
+                statsGrid.classList.remove('hidden');
+                historyCont.classList.add('hidden');
+            } else {
+                statsGrid.classList.remove('hidden');
+                if (config.visibleStats.history) {
+                    historyCont.classList.remove('hidden');
+                } else {
+                    historyCont.classList.add('hidden');
+                }
+            }
+
+            if (size !== 'small') {
+                const setVis = (id, visible) => {
+                    const el = document.getElementById(id);
+                    if (visible) el.classList.remove('hidden');
+                    else el.classList.add('hidden');
+                };
+
+                setVis('block-elo', config.visibleStats.elo);
+                setVis('block-matches', config.visibleStats.matches);
+                setVis('block-wins', config.visibleStats.wins);
+                setVis('block-winrate', config.visibleStats.winrate);
+                setVis('block-streak', config.visibleStats.streak);
+                setVis('block-avgkd', config.visibleStats.avgkd);
+                setVis('block-avghs', config.visibleStats.avghs);
+            }
+        }
+
+        function renderPlayer(data) {
+            document.getElementById('p-nickname').innerText = data.nickname;
+            document.getElementById('p-avatar').src = data.avatar || "https://assets.faceit-cdn.net/avatars/defaults/user.png";
+
+            const cs2 = data.games?.cs2;
+            if (cs2) {
+                document.getElementById('p-elo').innerText = cs2.faceit_elo;
+                document.getElementById('p-level').innerText = cs2.skill_level;
+
+                const levelColors = ['#fff', '#eee', '#5e5', '#5e5', '#ff0', '#ff0', '#fc0', '#ea0', '#f60', '#d00'];
+                document.getElementById('p-level').style.color = levelColors[cs2.skill_level - 1] || '#000';
+            }
+        }
+
+        function renderStats(data) {
+            if (!data) return;
+            const stats = data.lifetime || {};
+
+            document.getElementById('s-matches').innerText = stats['Matches'] || '0';
+            document.getElementById('s-wins').innerText = stats['Wins'] || '0';
+            document.getElementById('s-winrate').innerText = (stats['Win Rate %'] || '0') + '%';
+            document.getElementById('s-streak').innerText = stats['Current Win Streak'] || '0';
+            document.getElementById('s-avgkd').innerText = stats['Average K/D Ratio'] || '0.00';
+            document.getElementById('s-avghs').innerText = (stats['Average Headshots %'] || '0') + '%';
+        }
+
+        function renderHistory(history) {
+            const container = document.getElementById('match-history-container');
+            container.innerHTML = '';
+
+            if (!history || history.length === 0) {
+                container.innerHTML = '<div class="text-center text-xs opacity-50">No recent matches</div>';
+                return;
+            }
+
+            history.forEach(match => {
+                const isWin = match.i_win;
+                const resultClass = isWin ? 'match-win' : 'match-loss';
+                const badgeClass = isWin ? 'badge-w' : 'badge-l';
+                const badgeText = isWin ? 'W' : 'L';
+
+                let mapDisplay = match.map.replace('de_', '');
+                mapDisplay = mapDisplay.charAt(0).toUpperCase() + mapDisplay.slice(1);
+
+                let dateDisplay = "";
+                if (match.created_at) {
+                    dateDisplay = new Date(match.created_at).toLocaleDateString();
+                }
+
+                const statsDetail = `${match.kills}-${match.deaths} (${match.kd}) <span class="text-[var(--text-sub)]">|</span> ${match.hs}% <span class="text-xs text-[var(--text-sub)]">HS</span>`;
+
+                const html = `
+                    <div class="match-item ${resultClass}">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-3">
+                                <span class="match-result-badge ${badgeClass}">${badgeText}</span>
+                                <div class="text-sm font-bold">${mapDisplay}</div>
+                            </div>
+                            <div class="text-[10px] text-[var(--text-sub)] ml-1">${dateDisplay}</div>
+                        </div>
+                        
+                        <div class="flex flex-col items-end">
+                            <span class="text-sm font-bold">${match.score}</span>
+                            <span class="text-[11px] font-mono text-[var(--accent)] mt-1">${statsDetail}</span>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function renderError(msg) {
+            document.getElementById('p-nickname').innerText = "Error";
+            document.getElementById('match-history-container').innerHTML = `<div class="text-red-500 text-center p-4 text-sm">${msg}</div>`;
+        }
+
+        function setLoading(isLoading) {
+            const indicator = document.getElementById('loading-indicator');
+            if (isLoading) indicator.classList.remove('hidden');
+            else indicator.classList.add('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+
+</html>
